@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
 import httpx
+from pydantic import BaseModel, Field
 
 load_dotenv()
 
@@ -14,6 +15,21 @@ app = FastAPI(
     version="1.0.0",
 )
 
+class LabelInfo(BaseModel):
+    name: str
+    id: Optional[int] = None
+    catno: Optional[str] = None
+
+class DiscogsMasterResponse(BaseModel):
+    artiste: Optional[str]
+    titre: Optional[str]
+    identifiants_discogs: Dict[str, Any]
+    genres: List[str]
+    styles: List[str]
+    annee: Optional[int]
+    label: List[LabelInfo]
+    pochette: Optional[str]
+
 def get_discogs_headers() -> Dict[str, str]:
     """Construit les headers pour l'API Discogs."""
     headers = {"User-Agent": "disco2000-api/1.0 (https://github.com/cayel/disco2000-api)"}
@@ -22,40 +38,58 @@ def get_discogs_headers() -> Dict[str, str]:
         headers["Authorization"] = f"Discogs token={token}"
     return headers
 
-async def fetch_discogs_master(master_id: int) -> Dict[str, Any]:
-    """Appelle l'API Discogs et extrait les champs utiles pour un master donné."""
+def extract_label_info(label_list: List[dict]) -> List[LabelInfo]:
+    """Extrait les infos utiles des labels (name, id, catno), sans doublons."""
+    seen = set()
+    result = []
+    for l in label_list:
+        name = l.get("name")
+        if name and name not in seen:
+            seen.add(name)
+            result.append(LabelInfo(name=name, id=l.get("id"), catno=l.get("catno")))
+    return result
+
+def extract_pochette(images: List[dict]) -> Optional[str]:
+    """Retourne l'URL de la pochette principale ou la première image."""
+    if not images:
+        return None
+    primary = next((img for img in images if img.get("type") == "primary" and img.get("uri")), None)
+    return primary["uri"] if primary else images[0].get("uri")
+
+async def fetch_discogs_master(master_id: int) -> DiscogsMasterResponse:
+    """Appelle l'API Discogs et extrait les champs utiles pour un master donné. Complète le label via la main_release si besoin."""
     url = f"https://api.discogs.com/masters/{master_id}"
     headers = get_discogs_headers()
     async with httpx.AsyncClient() as client:
         response = await client.get(url, headers=headers)
-    if response.status_code != 200:
-        raise HTTPException(status_code=404, detail="Master non trouvé sur Discogs")
-    data = response.json()
-    # Labels : liste de noms
-    labels = [l.get("name") for l in data.get("labels", []) if l.get("name")]
-    # Pochette : image 'primary' ou première image
-    pochette = None
-    images = data.get("images", [])
-    if images:
-        primary = next((img for img in images if img.get("type") == "primary" and img.get("uri")), None)
-        pochette = primary["uri"] if primary else images[0].get("uri")
-    # Construction du résultat
-    return {
-        "artiste": data["artists"][0]["name"] if data.get("artists") else None,
-        "titre": data.get("title"),
-        "identifiants_discogs": {
-            "master_id": data.get("id"),
-            "main_release": data.get("main_release"),
-        },
-        "genres": data.get("genres", []),
-        "styles": data.get("styles", []),
-        "annee": data.get("year"),
-        "label": labels,
-        "pochette": pochette,
-    }
+        if response.status_code != 200:
+            raise HTTPException(status_code=404, detail="Master non trouvé sur Discogs")
+        data = response.json()
+        labels = extract_label_info(data.get("labels", []))
+        # Si pas de label sur le master, aller chercher sur la main_release
+        if not labels and data.get("main_release"):
+            rel_url = f"https://api.discogs.com/releases/{data['main_release']}"
+            rel_resp = await client.get(rel_url, headers=headers)
+            if rel_resp.status_code == 200:
+                rel_data = rel_resp.json()
+                labels = extract_label_info(rel_data.get("labels", []))
+        pochette = extract_pochette(data.get("images", []))
+        return DiscogsMasterResponse(
+            artiste=data["artists"][0]["name"] if data.get("artists") else None,
+            titre=data.get("title"),
+            identifiants_discogs={
+                "master_id": data.get("id"),
+                "main_release": data.get("main_release"),
+            },
+            genres=data.get("genres", []),
+            styles=data.get("styles", []),
+            annee=data.get("year"),
+            label=labels,
+            pochette=pochette,
+        )
 
 # Endpoint API pour récupérer les infos d'un master Discogs
-@app.get("/api/discogs/master/{master_id}")
+@app.get("/api/discogs/master/{master_id}", response_model=DiscogsMasterResponse)
 async def get_discogs_master(master_id: int):
     """Endpoint public pour obtenir les infos d'un master Discogs par son id."""
     return await fetch_discogs_master(master_id)
