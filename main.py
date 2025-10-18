@@ -1,10 +1,12 @@
 
-from fastapi import FastAPI, HTTPException
 import os
-from dotenv import load_dotenv
+from typing import List, Optional, Dict, Any
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
+from dotenv import load_dotenv
 import httpx
 
+load_dotenv()
 
 app = FastAPI(
     title="Vercel + FastAPI",
@@ -12,23 +14,33 @@ app = FastAPI(
     version="1.0.0",
 )
 
-
-load_dotenv()
-# Endpoint pour récupérer les infos d'un master Discogs
-@app.get("/api/discogs/master/{master_id}")
-async def get_discogs_master(master_id: int):
-    url = f"https://api.discogs.com/masters/{master_id}"
+def get_discogs_headers() -> Dict[str, str]:
+    """Construit les headers pour l'API Discogs."""
     headers = {"User-Agent": "disco2000-api/1.0 (https://github.com/cayel/disco2000-api)"}
     token = os.getenv("DISCOGS_TOKEN")
     if token:
         headers["Authorization"] = f"Discogs token={token}"
+    return headers
+
+async def fetch_discogs_master(master_id: int) -> Dict[str, Any]:
+    """Appelle l'API Discogs et extrait les champs utiles pour un master donné."""
+    url = f"https://api.discogs.com/masters/{master_id}"
+    headers = get_discogs_headers()
     async with httpx.AsyncClient() as client:
         response = await client.get(url, headers=headers)
     if response.status_code != 200:
         raise HTTPException(status_code=404, detail="Master non trouvé sur Discogs")
     data = response.json()
-    print(data)
-    result = {
+    # Labels : liste de noms
+    labels = [l.get("name") for l in data.get("labels", []) if l.get("name")]
+    # Pochette : image 'primary' ou première image
+    pochette = None
+    images = data.get("images", [])
+    if images:
+        primary = next((img for img in images if img.get("type") == "primary" and img.get("uri")), None)
+        pochette = primary["uri"] if primary else images[0].get("uri")
+    # Construction du résultat
+    return {
         "artiste": data["artists"][0]["name"] if data.get("artists") else None,
         "titre": data.get("title"),
         "identifiants_discogs": {
@@ -38,10 +50,15 @@ async def get_discogs_master(master_id: int):
         "genres": data.get("genres", []),
         "styles": data.get("styles", []),
         "annee": data.get("year"),
-        #"label": labels,
-        "image": data["images"][0]["resource_url"] if data.get("images") else None,
+        "label": labels,
+        "pochette": pochette,
     }
-    return result
+
+# Endpoint API pour récupérer les infos d'un master Discogs
+@app.get("/api/discogs/master/{master_id}")
+async def get_discogs_master(master_id: int):
+    """Endpoint public pour obtenir les infos d'un master Discogs par son id."""
+    return await fetch_discogs_master(master_id)
 
 @app.get("/api/data")
 def get_sample_data():
