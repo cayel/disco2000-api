@@ -1,5 +1,9 @@
-from fastapi import FastAPI
+
+from fastapi import FastAPI, HTTPException
+import os
+from dotenv import load_dotenv
 from fastapi.responses import HTMLResponse
+import httpx
 
 
 app = FastAPI(
@@ -8,6 +12,36 @@ app = FastAPI(
     version="1.0.0",
 )
 
+
+load_dotenv()
+# Endpoint pour récupérer les infos d'un master Discogs
+@app.get("/api/discogs/master/{master_id}")
+async def get_discogs_master(master_id: int):
+    url = f"https://api.discogs.com/masters/{master_id}"
+    headers = {"User-Agent": "disco2000-api/1.0 (https://github.com/cayel/disco2000-api)"}
+    token = os.getenv("DISCOGS_TOKEN")
+    if token:
+        headers["Authorization"] = f"Discogs token={token}"
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, headers=headers)
+    if response.status_code != 200:
+        raise HTTPException(status_code=404, detail="Master non trouvé sur Discogs")
+    data = response.json()
+    print(data)
+    result = {
+        "artiste": data["artists"][0]["name"] if data.get("artists") else None,
+        "titre": data.get("title"),
+        "identifiants_discogs": {
+            "master_id": data.get("id"),
+            "main_release": data.get("main_release"),
+        },
+        "genres": data.get("genres", []),
+        "styles": data.get("styles", []),
+        "annee": data.get("year"),
+        #"label": labels,
+        "image": data["images"][0]["resource_url"] if data.get("images") else None,
+    }
+    return result
 
 @app.get("/api/data")
 def get_sample_data():
