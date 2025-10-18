@@ -10,7 +10,17 @@ Visit the [FastAPI documentation](https://fastapi.tiangolo.com/) to learn more.
 
 ## Getting Started
 
-Install the required dependencies:
+
+## Installation des dépendances
+
+Créez et activez l'environnement virtuel (une seule fois) :
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Installez les dépendances :
 
 ```bash
 pip install -r requirements.txt
@@ -18,13 +28,18 @@ pip install -r requirements.txt
 
 ## Running Locally
 
-Start the development server on http://0.0.0.0:5001
+
+## Lancer le serveur en local
+
+Démarrez le serveur de développement sur http://0.0.0.0:5001 :
 
 ```bash
+source .venv/bin/activate
 uvicorn main:app --reload --port 5001
 ```
 
-When you make changes to your project, the server will automatically reload.
+
+Lorsque vous modifiez votre projet, le serveur se recharge automatiquement.
 
 ## Deploying to Vercel
 
