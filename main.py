@@ -1,4 +1,3 @@
-
 from dotenv import load_dotenv
 load_dotenv()
 import os
@@ -38,12 +37,22 @@ async def lifespan(app):
     logger.info("Migration des tables effectuée.")
     yield
 
+
 app = FastAPI(
     title="Vercel + FastAPI",
     description="Vercel + FastAPI",
     version="1.0.0",
     lifespan=lifespan
 )
+
+
+# Endpoint pour obtenir la liste des artistes (à placer à la fin du fichier)
+@app.get("/api/artists")
+async def get_artists():
+    async with SessionLocal() as session:
+        res = await session.execute(select(Artist))
+        artists = res.scalars().all()
+        return [{"id": a.id, "name": a.name, "discogs_id": a.discogs_id} for a in artists]
 
 class LabelInfo(BaseModel):
     name: str
@@ -104,12 +113,17 @@ async def fetch_discogs_master(master_id: int) -> DiscogsMasterResponse:
                 rel_data = rel_resp.json()
                 labels = extract_label_info(rel_data.get("labels", []))
         pochette = extract_pochette(data.get("images", []))
+        # Ajoute l'id Discogs de l'artiste si présent
+        artist_id = None
+        if data.get("artists") and len(data["artists"]) > 0:
+            artist_id = data["artists"][0].get("id")
         return DiscogsMasterResponse(
             artiste=data["artists"][0]["name"] if data.get("artists") else None,
             titre=data.get("title"),
             identifiants_discogs={
                 "master_id": data.get("id"),
                 "main_release": data.get("main_release"),
+                "artist_id": artist_id,
             },
             genres=data.get("genres", []),
             styles=data.get("styles", []),
@@ -477,12 +491,21 @@ async def add_studio_album(master_id: int):
             res = await session.execute(select(Artist).where(Artist.name == master.artiste))
             artist_obj = res.scalar_one_or_none()
             if not artist_obj:
-                artist_obj = Artist(name=master.artiste)
+                # Récupère le discogs_id de l'artiste si présent dans master
+                discogs_artist_id = None
+                if hasattr(master, 'identifiants_discogs') and master.identifiants_discogs:
+                    # On tente de récupérer l'id de l'artiste dans la structure du master
+                    # (souvent master.identifiants_discogs["artist_id"] ou similaire)
+                    discogs_artist_id = master.identifiants_discogs.get("artist_id")
+                # Si pas trouvé, tente de le récupérer dans master (si enrichi)
+                if not discogs_artist_id and hasattr(master, 'artist_id'):
+                    discogs_artist_id = getattr(master, 'artist_id')
+                artist_obj = Artist(name=master.artiste, discogs_id=discogs_artist_id)
                 session.add(artist_obj)
                 await session.flush()
-                logger.info(f"Nouvel artiste inséré : {artist_obj.name} (id={artist_obj.id})")
+                logger.info(f"Nouvel artiste inséré : {artist_obj.name} (id={artist_obj.id}, discogs_id={artist_obj.discogs_id})")
             else:
-                logger.info(f"Artiste déjà existant : {artist_obj.name} (id={artist_obj.id})")
+                logger.info(f"Artiste déjà existant : {artist_obj.name} (id={artist_obj.id}, discogs_id={artist_obj.discogs_id})")
         # Label : unique par discogs_id
         label_obj = None
         if master.label:

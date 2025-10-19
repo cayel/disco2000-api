@@ -50,12 +50,13 @@ POST /api/albums/studio?master_id={id_discogs}
 GET /api/discogs/master/{master_id}
 ```
 
-### Exemple de réponse
+
+### Exemple de réponse (infos master Discogs)
 ```json
 {
   "artiste": "...",
   "titre": "...",
-  "identifiants_discogs": {"master_id": 123, "main_release": 456},
+  "identifiants_discogs": {"master_id": 123, "main_release": 456, "artist_id": 789},
   "genres": ["Rock", "Pop", "Electronic"],
   "styles": ["Indie", "Synthpop"],
   "annee": 2000,
@@ -65,6 +66,20 @@ GET /api/discogs/master/{master_id}
   "pochette": "https://..."
 }
 ```
+
+### Endpoint artistes
+```
+GET /api/artists
+```
+Réponse :
+```json
+[
+  {"id": 1, "name": "Nom Artiste", "discogs_id": 789},
+  ...
+]
+```
+
+> Depuis octobre 2025, le champ `discogs_id` de l'artiste est bien renseigné lors de l'ajout d'un album à partir d'un master Discogs.
 
 ## Lancer les tests
 
