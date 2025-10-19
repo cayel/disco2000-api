@@ -14,7 +14,6 @@ async def test_get_artists_list():
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
-        # Vérifie que chaque élément est un dict avec les bonnes clés
         for artist in data:
             assert isinstance(artist, dict)
             assert "id" in artist

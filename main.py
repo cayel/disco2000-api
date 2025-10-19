@@ -45,7 +45,28 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-
+# Endpoint pour obtenir la liste des albums
+@app.get("/api/albums")
+async def get_albums():
+    async with SessionLocal() as session:
+        res = await session.execute(select(Album).order_by(Album.year.desc()))
+        albums = res.scalars().all()
+        result = []
+        for album in albums:
+            # Récupère l'artiste lié
+            artist_name = None
+            if album.artist_id:
+                artist = await session.get(Artist, album.artist_id)
+                if artist:
+                    artist_name = artist.name
+            result.append({
+                "artist": artist_name,
+                "title": album.title,
+                "year": album.year,
+                "cover_url": album.cover_url
+            })
+        return result
+    
 # Endpoint pour obtenir la liste des artistes (à placer à la fin du fichier)
 @app.get("/api/artists")
 async def get_artists():

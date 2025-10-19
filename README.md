@@ -81,11 +81,17 @@ Réponse :
 
 > Depuis octobre 2025, le champ `discogs_id` de l'artiste est bien renseigné lors de l'ajout d'un album à partir d'un master Discogs.
 
+
 ## Lancer les tests
 
+Pour exécuter tous les tests asynchrones sans erreur d'event loop (FastAPI + SQLAlchemy async), utilise le plugin pytest-xdist :
+
 ```bash
-pytest tests/
+pip install pytest-xdist
+pytest -n auto tests
 ```
+
+Chaque fichier de test sera lancé dans un processus séparé, ce qui garantit l'isolation des contextes asynchrones.
 
 ## Déploiement Vercel
 
