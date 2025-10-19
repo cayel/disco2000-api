@@ -1,4 +1,11 @@
 fastapi
 uvicorn
-dotenv
+python-dotenv
+sqlalchemy
+asyncpg
+psycopg2-binary
+pydantic
 httpx
+pytest
+pytest-asyncio
+pytest-xdist
