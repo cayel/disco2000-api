@@ -1,18 +1,48 @@
 
+from dotenv import load_dotenv
+load_dotenv()
 import os
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
-from dotenv import load_dotenv
 import httpx
 from pydantic import BaseModel, Field
 
-load_dotenv()
+from db import SessionLocal
+from models import Artist, Label, Album
+from sqlalchemy import select
+import asyncio
+from fastapi import status
+import logging
+
+logger = logging.getLogger("disco2000")
+logging.basicConfig(level=logging.INFO)
+
+
 
 app = FastAPI(
     title="Vercel + FastAPI",
     description="Vercel + FastAPI",
     version="1.0.0",
+)
+
+# Migration automatique des tables au démarrage
+
+from db import Base, engine
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app):
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    logger.info("Migration des tables effectuée.")
+    yield
+
+app = FastAPI(
+    title="Vercel + FastAPI",
+    description="Vercel + FastAPI",
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 class LabelInfo(BaseModel):
@@ -427,3 +457,69 @@ def read_root():
     </body>
     </html>
     """
+
+# Endpoint pour ajouter un album studio à partir d'un master Discogs
+
+@app.post("/api/albums/studio", status_code=status.HTTP_201_CREATED)
+async def add_studio_album(master_id: int):
+    logger.info(f"Début ajout album studio pour master Discogs {master_id}")
+    try:
+        master = await fetch_discogs_master(master_id)
+        logger.info(f"Infos master récupérées : titre={master.titre}, artiste={master.artiste}")
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération du master Discogs {master_id} : {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    from sqlalchemy.exc import IntegrityError
+    async with SessionLocal() as session:
+        # Artiste : unique par nom
+        artist_obj = None
+        if master.artiste:
+            res = await session.execute(select(Artist).where(Artist.name == master.artiste))
+            artist_obj = res.scalar_one_or_none()
+            if not artist_obj:
+                artist_obj = Artist(name=master.artiste)
+                session.add(artist_obj)
+                await session.flush()
+                logger.info(f"Nouvel artiste inséré : {artist_obj.name} (id={artist_obj.id})")
+            else:
+                logger.info(f"Artiste déjà existant : {artist_obj.name} (id={artist_obj.id})")
+        # Label : unique par discogs_id
+        label_obj = None
+        if master.label:
+            label_info = master.label[0]
+            res = await session.execute(select(Label).where(Label.discogs_id == label_info.id))
+            label_obj = res.scalar_one_or_none()
+            if not label_obj:
+                label_obj = Label(name=label_info.name, discogs_id=label_info.id, catno=label_info.catno)
+                session.add(label_obj)
+                await session.flush()
+                logger.info(f"Nouveau label inséré : {label_obj.name} (id={label_obj.id})")
+            else:
+                logger.info(f"Label déjà existant : {label_obj.name} (id={label_obj.id})")
+        # Vérifie si l'album existe déjà (par discogs_master_id)
+        res_album = await session.execute(select(Album).where(Album.discogs_master_id == master.identifiants_discogs["master_id"]))
+        album_exist = res_album.scalar_one_or_none()
+        if album_exist:
+            logger.info(f"Album déjà existant : {album_exist.title} (id={album_exist.id})")
+            raise HTTPException(status_code=409, detail="L'album existe déjà dans la base de données.")
+        # Album
+        album = Album(
+            title=master.titre,
+            discogs_master_id=master.identifiants_discogs["master_id"],
+            year=master.annee,
+            genre=master.genres if master.genres else [],
+            style=master.styles if master.styles else [],
+            cover_url=master.pochette,
+            type="Studio",
+            artist_id=artist_obj.id if artist_obj else None,
+            label_id=label_obj.id if label_obj else None,
+        )
+        session.add(album)
+        try:
+            await session.commit()
+        except IntegrityError as e:
+            await session.rollback()
+            logger.error(f"Erreur d'intégrité lors de l'ajout de l'album : {e}")
+            raise HTTPException(status_code=409, detail="L'album existe déjà dans la base de données.")
+        logger.info(f"Album studio ajouté : {album.title} (id={album.id})")
+        return {"message": "Album studio ajouté", "album_id": album.id}

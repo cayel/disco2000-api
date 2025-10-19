@@ -1,97 +1,84 @@
-# FastHTML Boilerplate
+# API Disco2000
 
-Deploy your [FastAPI](https://fastapi.tiangolo.com/) project to Vercel with zero configuration.
+API FastAPI pour la gestion d'albums, artistes et labels, intégrée à Discogs.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/fastapi&template=fastapi)
+## Fonctionnalités principales
+- Ajout d'albums studio à partir d'un master Discogs
+- Gestion des artistes et labels (unicité, récupération automatique)
+- Endpoints REST pour consultation et insertion
+- Stockage des genres et styles en tableau (plusieurs valeurs par album)
+- Tests unitaires robustes (pytest)
+- Migration automatique des tables à chaque démarrage (via FastAPI lifespan)
+- Configuration par fichier `.env` (token Discogs)
 
-_Live Example: https://ai-sdk-preview-python-streaming.vercel.app/_
+## Installation
 
-Visit the [FastAPI documentation](https://fastapi.tiangolo.com/) to learn more.
-
-## Getting Started
-
-
-
-## Installation des dépendances
-
-Créez et activez l'environnement virtuel (une seule fois) :
-
+Créez et activez l'environnement virtuel :
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-Installez les dépendances (API et tests) :
-
+Installez les dépendances :
 ```bash
 pip install -r requirements.txt
-pip install -r requirements-dev.txt  # si ce fichier existe, sinon installez pytest, httpx, python-dotenv, fastapi, pydantic
 ```
 
-Ajoutez un fichier `.env` à la racine du projet avec votre token Discogs :
-
+Ajoutez un fichier `.env` à la racine :
 ```
 DISCOGS_TOKEN=VOTRE_TOKEN
 ```
 
-## Running Locally
+## Lancement du serveur
 
-
-
-## Lancer le serveur en local
-
-Démarrez le serveur de développement sur http://0.0.0.0:5001 :
-
+Démarrez l'API sur http://0.0.0.0:5001 :
 ```bash
-source .venv/bin/activate
 uvicorn main:app --reload --port 5001
 ```
 
+## Endpoints principaux
 
+### Ajouter un album studio
+```
+POST /api/albums/studio?master_id={id_discogs}
+```
+- Retourne 201 si l'album est ajouté
+- Retourne 409 si l'album existe déjà
 
-Lorsque vous modifiez votre projet, le serveur se recharge automatiquement.
-
-## Endpoint Discogs
-
-Pour récupérer les informations d'un master Discogs :
-
+### Récupérer les infos d'un master Discogs
 ```
 GET /api/discogs/master/{master_id}
 ```
 
-Réponse :
+### Exemple de réponse
 ```json
 {
-	"artiste": "...",
-	"titre": "...",
-	"identifiants_discogs": {"master_id": 123, "main_release": 456},
-	"genres": ["..."],
-	"styles": ["..."],
-	"annee": 2000,
-	"label": [
-		{"name": "Label Name", "id": 1, "catno": "ABC123"}
-	],
-	"pochette": "https://..."
+  "artiste": "...",
+  "titre": "...",
+  "identifiants_discogs": {"master_id": 123, "main_release": 456},
+  "genres": ["Rock", "Pop", "Electronic"],
+  "styles": ["Indie", "Synthpop"],
+  "annee": 2000,
+  "label": [
+    {"name": "Label Name", "id": 1, "catno": "ABC123"}
+  ],
+  "pochette": "https://..."
 }
 ```
 
 ## Lancer les tests
 
-Les tests unitaires sont dans le dossier `tests/` :
-
 ```bash
 pytest tests/
 ```
 
-## Deploying to Vercel
-
-Deploy your project to Vercel with the following command:
+## Déploiement Vercel
 
 ```bash
 npm install -g vercel
 vercel --prod
 ```
 
-Or `git push` to your repostory with our [git integration](https://vercel.com/docs/deployments/git).
+---
 
-To view the source code for this template, [visit the example repository](https://github.com/vercel/vercel/tree/main/examples/fastapi).
+Pour toute question ou amélioration, ouvrez une issue ou contactez le repo.
