@@ -534,7 +534,7 @@ async def add_studio_album(master_id: int):
             res = await session.execute(select(Label).where(Label.discogs_id == label_info.id))
             label_obj = res.scalar_one_or_none()
             if not label_obj:
-                label_obj = Label(name=label_info.name, discogs_id=label_info.id, catno=label_info.catno)
+                label_obj = Label(name=label_info.name, discogs_id=label_info.id)
                 session.add(label_obj)
                 await session.flush()
                 logger.info(f"Nouveau label inséré : {label_obj.name} (id={label_obj.id})")
@@ -554,6 +554,7 @@ async def add_studio_album(master_id: int):
             genre=master.genres if master.genres else [],
             style=master.styles if master.styles else [],
             cover_url=master.pochette,
+            catno=label_info.catno if label_obj and hasattr(label_info, 'catno') else None,
             type="Studio",
             artist_id=artist_obj.id if artist_obj else None,
             label_id=label_obj.id if label_obj else None,

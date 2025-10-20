@@ -1,10 +1,13 @@
+
 import asyncio
+from dotenv import load_dotenv
+load_dotenv()
 from db import Base, engine
 
-async def create_tables():
+async def migrate():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    print("Tables créées avec succès.")
+    print("Migration terminée : tables créées si elles n'existaient pas.")
 
 if __name__ == "__main__":
-    asyncio.run(create_tables())
+    asyncio.run(migrate())

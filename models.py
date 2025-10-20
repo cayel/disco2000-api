@@ -15,7 +15,7 @@ class Label(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     discogs_id = Column(Integer, index=True, unique=True)
-    catno = Column(String, nullable=True)
+    # catno doit être au niveau de l'album, pas du label
     albums = relationship("Album", back_populates="label")
 
 class Album(Base):
@@ -27,6 +27,7 @@ class Album(Base):
     genre = Column(ARRAY(String))
     style = Column(ARRAY(String))
     cover_url = Column(String)
+    catno = Column(String, nullable=True)  # Ajout du champ catno au niveau album
     type = Column(String, default="Studio")
     artist_id = Column(Integer, ForeignKey("artists.id"))
     label_id = Column(Integer, ForeignKey("labels.id"))
