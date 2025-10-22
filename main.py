@@ -20,6 +20,10 @@ logging.basicConfig(level=logging.INFO)
 from fastapi.middleware.cors import CORSMiddleware
 from db import Base, engine
 from contextlib import asynccontextmanager
+import os  # Import os to access environment variables
+
+# Récupère les origines autorisées depuis la variable d'environnement ALLOW_ORIGINS
+origins = os.getenv("ALLOW_ORIGINS", "*").split(",")
 
 @asynccontextmanager
 async def lifespan(app):
@@ -36,7 +40,7 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Autorise toutes les origines (dev uniquement)
+    allow_origins=origins,  # Utilise les origines dynamiques
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
