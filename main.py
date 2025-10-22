@@ -17,16 +17,7 @@ import logging
 logger = logging.getLogger("disco2000")
 logging.basicConfig(level=logging.INFO)
 
-
-
-app = FastAPI(
-    title="Vercel + FastAPI",
-    description="Vercel + FastAPI",
-    version="1.0.0",
-)
-
-# Migration automatique des tables au démarrage
-
+from fastapi.middleware.cors import CORSMiddleware
 from db import Base, engine
 from contextlib import asynccontextmanager
 
@@ -37,12 +28,18 @@ async def lifespan(app):
     logger.info("Migration des tables effectuée.")
     yield
 
-
 app = FastAPI(
     title="Vercel + FastAPI",
     description="Vercel + FastAPI",
     version="1.0.0",
     lifespan=lifespan
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # Autorise toutes les origines (dev uniquement)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
 )
 
 # Endpoint pour obtenir la liste des albums
