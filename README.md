@@ -45,6 +45,14 @@ POST /api/albums/studio?master_id={id_discogs}
 - Retourne 201 si l'album est ajouté
 - Retourne 409 si l'album existe déjà
 
+
+### Supprimer un album
+```
+DELETE /api/albums/{album_id}
+```
+- Retourne 204 si l'album est supprimé
+- Retourne 404 si l'album n'existe pas
+  
 ### Récupérer les infos d'un master Discogs
 ```
 GET /api/discogs/master/{master_id}

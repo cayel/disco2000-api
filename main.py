@@ -4,6 +4,8 @@ import os
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
+from fastapi import Path
+
 import httpx
 from pydantic import BaseModel, Field
 
@@ -46,6 +48,17 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+# Endpoint pour supprimer un album par son id
+@app.delete("/api/albums/{album_id}", status_code=204)
+async def delete_album(album_id: int = Path(..., description="ID de l'album à supprimer")):
+    async with SessionLocal() as session:
+        album = await session.get(Album, album_id)
+        if not album:
+            raise HTTPException(status_code=404, detail="Album non trouvé")
+        await session.delete(album)
+        await session.commit()
+        return None
+    
 # Endpoint pour obtenir la liste des albums
 @app.get("/api/albums")
 async def get_albums():
