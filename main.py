@@ -60,9 +60,10 @@ app.add_middleware(
 
 app.include_router(user_router)
 
+from auth_dependencies import get_current_user_contributeur
 # Endpoint pour supprimer un album par son id
 @app.delete("/api/albums/{album_id}", status_code=204)
-async def delete_album(album_id: int = Path(..., description="ID de l'album à supprimer")):
+async def delete_album(album_id: int = Path(..., description="ID de l'album à supprimer"), user=Depends(get_current_user_contributeur)):
     async with SessionLocal() as session:
         album = await session.get(Album, album_id)
         if not album:
@@ -521,8 +522,10 @@ def read_root():
 
 # Endpoint pour ajouter un album studio à partir d'un master Discogs
 
+from auth_dependencies import get_current_user_contributeur
+
 @app.post("/api/albums/studio", status_code=status.HTTP_201_CREATED)
-async def add_studio_album(master_id: int):
+async def add_studio_album(master_id: int, user=Depends(get_current_user_contributeur)):
     logger.info(f"Début ajout album studio pour master Discogs {master_id}")
     try:
         master = await fetch_discogs_master(master_id)

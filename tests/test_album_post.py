@@ -17,20 +17,26 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+
 import pytest
 from fastapi.testclient import TestClient
-
 from main import app
 from models import Album
+from tests.utils_jwt import get_test_jwt_contributeur
 
 client = TestClient(app)
-headers = {"X-API-KEY": os.getenv("API_KEY")}
+def get_auth_headers():
+    jwt = get_test_jwt_contributeur()
+    return {
+        "X-API-KEY": os.getenv("API_KEY"),
+        "Authorization": f"Bearer {jwt}"
+    }
 
 def test_add_studio_album_error(monkeypatch):
     async def dummy_fetch_discogs_master(master_id):
         raise Exception("Erreur Discogs")
     monkeypatch.setattr("main.fetch_discogs_master", dummy_fetch_discogs_master)
-    response = client.post("/api/albums/studio?master_id=999", headers=headers)
+    response = client.post("/api/albums/studio?master_id=999", headers=get_auth_headers())
     assert response.status_code == 500
 
 def test_add_studio_album_artist_exists(monkeypatch):
@@ -95,7 +101,7 @@ def test_add_studio_album_artist_exists(monkeypatch):
             obj.id = 99
     dummy_session = DummySession()
     monkeypatch.setattr("main.SessionLocal", lambda: dummy_session)
-    response = client.post("/api/albums/studio?master_id=321", headers=headers)
+    response = client.post("/api/albums/studio?master_id=321", headers=get_auth_headers())
     assert response.status_code == 201
     data = response.json()
     assert data["message"] == "Album studio ajouté"
@@ -190,7 +196,7 @@ def test_add_studio_album_album_exists(monkeypatch):
                     obj.id = 99
             monkeypatch.setattr(main, "SessionLocal", lambda: DummySession())
             headers = {"X-API-KEY": "NousNavionsPasFiniDeNousParlerDAmour"}
-            response = client.post("/api/albums/studio?master_id=555", headers=headers)
+            response = client.post("/api/albums/studio?master_id=555", headers=get_auth_headers())
             assert response.status_code == 409
             data = response.json()
             assert "existe déjà" in data.get("detail", "") or "déjà" in data.get("detail", "")
