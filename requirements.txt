@@ -3,6 +3,7 @@ uvicorn
 python-dotenv
 sqlalchemy
 asyncpg
+email-validator
 psycopg2-binary
 pydantic
 httpx
