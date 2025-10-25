@@ -1,7 +1,18 @@
+
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship
 from db import Base
+
+# Table User avec gestion des rôles multiples
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    email = Column(String, unique=True, nullable=False, index=True)
+    identifier = Column(String, unique=True, nullable=False, index=True)
+    roles = Column(ARRAY(String), nullable=False)  # Ex: ["utilisateur", "contributeur", "administrateur"]
 
 class Artist(Base):
     __tablename__ = "artists"

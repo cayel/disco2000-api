@@ -5,6 +5,7 @@ from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi import Path
+from user_endpoints import router as user_router
 
 import httpx
 from pydantic import BaseModel, Field
@@ -47,6 +48,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+app.include_router(user_router)
 
 # Endpoint pour supprimer un album par son id
 @app.delete("/api/albums/{album_id}", status_code=204)
