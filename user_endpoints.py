@@ -1,3 +1,5 @@
+from fastapi import Query
+
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 from db import SessionLocal
@@ -14,6 +16,17 @@ class UserCreate(BaseModel):
     identifier: str
     roles: List[str]
 
+class UserExistsResponse(BaseModel):
+    exists: bool
+    
+# Endpoint pour tester si un utilisateur existe à partir de son email
+@router.get("/api/users/exists", response_model=UserExistsResponse)
+async def user_exists(email: EmailStr = Query(...)):
+    async with SessionLocal() as session:
+        result = await session.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+        return {"exists": user is not None}
+    
 @router.post("/api/users", status_code=201)
 async def create_user(user: UserCreate):
     async with SessionLocal() as session:
