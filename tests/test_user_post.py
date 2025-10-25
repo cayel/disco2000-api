@@ -40,7 +40,8 @@ async def test_create_user_success(monkeypatch):
             "identifier": "alice01",
             "roles": ["utilisateur", "contributeur"]
         }
-        response = await client.post("/api/users", json=payload)
+        headers = {"X-API-KEY": "NousNavionsPasFiniDeNousParlerDAmour"}
+        response = await client.post("/api/users", json=payload, headers=headers)
         assert response.status_code == 201
         data = response.json()
         assert data["first_name"] == "Alice"
@@ -73,6 +74,7 @@ async def test_create_user_conflict(monkeypatch):
             "identifier": "bob01",
             "roles": ["administrateur"]
         }
-        response = await client.post("/api/users", json=payload)
+        headers = {"X-API-KEY": "NousNavionsPasFiniDeNousParlerDAmour"}
+        response = await client.post("/api/users", json=payload, headers=headers)
         assert response.status_code == 409
         assert response.json()["detail"] == "Email ou identifiant déjà utilisé"

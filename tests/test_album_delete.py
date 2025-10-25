@@ -9,7 +9,8 @@ from main import app
 async def test_delete_album_not_found():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.delete("/api/albums/999999")
+        headers = {"X-API-KEY": "NousNavionsPasFiniDeNousParlerDAmour"}
+        response = await client.delete("/api/albums/999999", headers=headers)
         assert response.status_code == 404
         assert response.json()["detail"] == "Album non trouvé"
 
@@ -34,5 +35,6 @@ async def test_delete_album_success(monkeypatch):
     monkeypatch.setattr("main.SessionLocal", lambda: DummySession())
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.delete("/api/albums/42")
+        headers = {"X-API-KEY": "NousNavionsPasFiniDeNousParlerDAmour"}
+        response = await client.delete("/api/albums/42", headers=headers)
         assert response.status_code == 204

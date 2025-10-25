@@ -7,7 +7,8 @@ from main import app
 async def test_get_albums_structure():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/albums")
+        headers = {"X-API-KEY": "NousNavionsPasFiniDeNousParlerDAmour"}
+        response = await client.get("/api/albums", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)

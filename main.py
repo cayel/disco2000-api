@@ -1,3 +1,4 @@
+from fastapi import Header, Depends
 from dotenv import load_dotenv
 load_dotenv()
 import os
@@ -28,6 +29,13 @@ import os  # Import os to access environment variables
 # Récupère les origines autorisées depuis la variable d'environnement ALLOW_ORIGINS
 origins = os.getenv("ALLOW_ORIGINS", "*").split(",")
 
+# Clé API à définir dans .env ou en dur pour l'exemple
+API_KEY = os.getenv("API_KEY")
+
+def verify_api_key(x_api_key: str = Header(...)):
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=403, detail="Clé API invalide")
+    
 @asynccontextmanager
 async def lifespan(app):
     async with engine.begin() as conn:
@@ -39,7 +47,8 @@ app = FastAPI(
     title="Vercel + FastAPI",
     description="Vercel + FastAPI",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    dependencies=[Depends(verify_api_key)]
 )
 app.add_middleware(
     CORSMiddleware,

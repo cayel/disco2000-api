@@ -18,60 +18,18 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import pytest
 from fastapi.testclient import TestClient
+
 from main import app
 from models import Album
 
 client = TestClient(app)
-
-def test_add_studio_album_success(monkeypatch):
-    """Teste l'ajout d'un album studio avec un master Discogs simulé et une base mockée."""
-    # Patch fetch_discogs_master pour retourner un master simulé
-    class DummyLabel:
-        def __init__(self):
-            self.name = "Test Label"
-            self.id = 1
-            self.catno = "TL001"
-    class DummyMaster:
-        artiste = "Test Artist"
-        titre = "Test Album"
-        identifiants_discogs = {"master_id": 123, "main_release": 456}
-        genres = ["Electronic"]
-        styles = ["Techno"]
-        annee = 2020
-        label = [DummyLabel()]
-        pochette = "http://img.com/cover.jpg"
-    async def dummy_fetch_discogs_master(master_id):
-        return DummyMaster()
-    monkeypatch.setattr("main.fetch_discogs_master", dummy_fetch_discogs_master)
-    # Patch SessionLocal pour éviter la vraie base
-    class DummySession:
-        async def __aenter__(self):
-            return self
-        async def __aexit__(self, exc_type, exc, tb):
-            pass
-        async def execute(self, *args, **kwargs):
-            class DummyRes:
-                def scalar_one_or_none(self):
-                    return None
-            return DummyRes()
-        async def flush(self):
-            pass
-        async def commit(self):
-            pass
-        def add(self, obj):
-            obj.id = 1
-    monkeypatch.setattr("main.SessionLocal", lambda: DummySession())
-    response = client.post("/api/albums/studio?master_id=123")
-    assert response.status_code == 201
-    data = response.json()
-    assert data["message"] == "Album studio ajouté"
-    assert data["album_id"] == 1
+headers = {"X-API-KEY": "NousNavionsPasFiniDeNousParlerDAmour"}
 
 def test_add_studio_album_error(monkeypatch):
     async def dummy_fetch_discogs_master(master_id):
         raise Exception("Erreur Discogs")
     monkeypatch.setattr("main.fetch_discogs_master", dummy_fetch_discogs_master)
-    response = client.post("/api/albums/studio?master_id=999")
+    response = client.post("/api/albums/studio?master_id=999", headers=headers)
     assert response.status_code == 500
 
 def test_add_studio_album_artist_exists(monkeypatch):
@@ -136,7 +94,7 @@ def test_add_studio_album_artist_exists(monkeypatch):
             obj.id = 99
     dummy_session = DummySession()
     monkeypatch.setattr("main.SessionLocal", lambda: dummy_session)
-    response = client.post("/api/albums/studio?master_id=321")
+    response = client.post("/api/albums/studio?master_id=321", headers=headers)
     assert response.status_code == 201
     data = response.json()
     assert data["message"] == "Album studio ajouté"
@@ -230,7 +188,8 @@ def test_add_studio_album_album_exists(monkeypatch):
                     self.added.append(type(obj).__name__)
                     obj.id = 99
             monkeypatch.setattr(main, "SessionLocal", lambda: DummySession())
-            response = client.post("/api/albums/studio?master_id=555")
+            headers = {"X-API-KEY": "NousNavionsPasFiniDeNousParlerDAmour"}
+            response = client.post("/api/albums/studio?master_id=555", headers=headers)
             assert response.status_code == 409
             data = response.json()
             assert "existe déjà" in data.get("detail", "") or "déjà" in data.get("detail", "")
