@@ -1,3 +1,4 @@
+import os
 import sys
 import os
 import pytest
@@ -36,7 +37,7 @@ async def test_list_users(monkeypatch):
     monkeypatch.setattr("user_endpoints.SessionLocal", lambda: DummySession())
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        headers = {"X-API-KEY": "NousNavionsPasFiniDeNousParlerDAmour"}
+        headers = {"X-API-KEY": os.getenv("API_KEY")}
         response = await client.get("/api/users", headers=headers)
         assert response.status_code == 200
         data = response.json()

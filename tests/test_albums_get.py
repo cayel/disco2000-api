@@ -1,3 +1,4 @@
+import os
 
 import pytest
 from httpx import AsyncClient, ASGITransport
@@ -7,7 +8,7 @@ from main import app
 async def test_get_albums_structure():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        headers = {"X-API-KEY": "NousNavionsPasFiniDeNousParlerDAmour"}
+        headers = {"X-API-KEY": os.getenv("API_KEY")}
         response = await client.get("/api/albums", headers=headers)
         assert response.status_code == 200
         data = response.json()

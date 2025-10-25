@@ -34,7 +34,7 @@ def test_discogs_master_success(monkeypatch):
             return MockResponse({"labels": [{"name": "Fallback Label", "id": 2, "catno": "FB001"}]})
         return MockResponse({}, status_code=404)
     monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
-    headers = {"X-API-KEY": "NousNavionsPasFiniDeNousParlerDAmour"}
+    headers = {"X-API-KEY": os.getenv("API_KEY")}
     response = client.get("/api/discogs/master/123", headers=headers)
     assert response.status_code == 200
     data = response.json()

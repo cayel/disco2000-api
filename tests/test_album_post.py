@@ -12,6 +12,7 @@ def make_album():
     a.label_id = 1
     return a
 
+
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -23,7 +24,7 @@ from main import app
 from models import Album
 
 client = TestClient(app)
-headers = {"X-API-KEY": "NousNavionsPasFiniDeNousParlerDAmour"}
+headers = {"X-API-KEY": os.getenv("API_KEY")}
 
 def test_add_studio_album_error(monkeypatch):
     async def dummy_fetch_discogs_master(master_id):

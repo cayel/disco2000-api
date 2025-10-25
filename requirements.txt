@@ -10,3 +10,5 @@ httpx
 pytest
 pytest-asyncio
 pytest-xdist
+python-jose
+firebase-admin
