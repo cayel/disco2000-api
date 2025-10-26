@@ -60,39 +60,10 @@ app.add_middleware(
 
 app.include_router(user_router)
 
-from auth_dependencies import get_current_user_contributeur
-# Endpoint pour supprimer un album par son id
-@app.delete("/api/albums/{album_id}", status_code=204)
-async def delete_album(album_id: int = Path(..., description="ID de l'album à supprimer"), user=Depends(get_current_user_contributeur)):
-    async with SessionLocal() as session:
-        album = await session.get(Album, album_id)
-        if not album:
-            raise HTTPException(status_code=404, detail="Album non trouvé")
-        await session.delete(album)
-        await session.commit()
-        return None
-    
-# Endpoint pour obtenir la liste des albums
-@app.get("/api/albums")
-async def get_albums():
-    async with SessionLocal() as session:
-        res = await session.execute(select(Album).order_by(Album.year.desc()))
-        albums = res.scalars().all()
-        result = []
-        for album in albums:
-            # Récupère l'artiste lié
-            artist_name = None
-            if album.artist_id:
-                artist = await session.get(Artist, album.artist_id)
-                if artist:
-                    artist_name = artist.name
-            result.append({
-                "artist": artist_name,
-                "title": album.title,
-                "year": album.year,
-                "cover_url": album.cover_url
-            })
-        return result
+
+# --- Endpoints albums déplacés dans album_endpoints.py ---
+from album_endpoints import router as album_router
+app.include_router(album_router)
     
 # Endpoint pour obtenir la liste des artistes (à placer à la fin du fichier)
 @app.get("/api/artists")

@@ -38,7 +38,7 @@ async def test_delete_album_success(monkeypatch):
             self.deleted = obj
         async def commit(self):
             self.committed = True
-    monkeypatch.setattr("main.SessionLocal", lambda: DummySession())
+    monkeypatch.setattr("album_endpoints.SessionLocal", lambda: DummySession())
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         jwt = get_test_jwt_contributeur()
