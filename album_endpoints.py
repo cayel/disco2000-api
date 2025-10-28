@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Path
 from sqlalchemy import select
 from db import SessionLocal
-from models import Album, Artist, Label
+from models import Album, Artist, Label, UserAlbumCollection
 from auth_dependencies import get_current_user_contributeur
 import logging
 
@@ -19,8 +19,21 @@ async def delete_album(album_id: int = Path(..., description="ID de l'album à s
         await session.commit()
         return None
 
+from fastapi import Request
+
 @router.get("/api/albums")
-async def get_albums():
+async def get_albums(request: Request):
+    user = None
+    roles = []
+    # Tente de décoder le token pour savoir si l'utilisateur est authentifié
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        from jwt_utils import decode_access_token
+        token = auth_header.split(" ", 1)[1]
+        payload = decode_access_token(token)
+        if payload:
+            user = payload
+            roles = payload.get("roles", [])
     async with SessionLocal() as session:
         res = await session.execute(select(Album).order_by(Album.year.desc()))
         albums = res.scalars().all()
@@ -31,13 +44,27 @@ async def get_albums():
                 artist = await session.get(Artist, album.artist_id)
                 if artist:
                     artist_name = artist.name
-            result.append({
+            album_dict = {
                 "id": album.id,
                 "artist": artist_name,
                 "title": album.title,
                 "year": album.year,
                 "cover_url": album.cover_url
-            })
+            }
+            # Ajoute les infos de collection si utilisateur authentifié et rôle utilisateur
+            if user and "utilisateur" in roles:
+                res_coll = await session.execute(
+                    select(UserAlbumCollection).where(
+                        UserAlbumCollection.user_id == user["id"],
+                        UserAlbumCollection.album_id == album.id
+                    )
+                )
+                coll = res_coll.scalar_one_or_none()
+                if coll:
+                    album_dict["collection"] = {"cd": coll.cd, "vinyl": coll.vinyl}
+                else:
+                    album_dict["collection"] = None
+            result.append(album_dict)
         return result
 
 
@@ -156,8 +183,21 @@ async def add_album_studio(
 
 # --- Endpoint détaillé après la définition de router ---
 
+from fastapi import Request
+
 @router.get("/api/albums/{album_id}")
-async def get_album_details(album_id: int):
+async def get_album_details(album_id: int, request: Request):
+    user = None
+    roles = []
+    # Tente de décoder le token pour savoir si l'utilisateur est authentifié
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        from jwt_utils import decode_access_token
+        token = auth_header.split(" ", 1)[1]
+        payload = decode_access_token(token)
+        if payload:
+            user = payload
+            roles = payload.get("roles", [])
     async with SessionLocal() as session:
         album = await session.get(Album, album_id)
         if not album:
@@ -168,7 +208,7 @@ async def get_album_details(album_id: int):
             artist = await session.get(Artist, album.artist_id)
         if album.label_id:
             label = await session.get(Label, album.label_id)
-        return {
+        album_dict = {
             "id": album.id,
             "title": album.title,
             "year": album.year,
@@ -189,4 +229,19 @@ async def get_album_details(album_id: int):
                 "discogs_id": label.discogs_id
             } if label else None
         }
+        # Ajoute les infos de collection si utilisateur authentifié et rôle utilisateur
+        if user and "utilisateur" in roles:
+            from models import UserAlbumCollection
+            res_coll = await session.execute(
+                select(UserAlbumCollection).where(
+                    UserAlbumCollection.user_id == user["id"],
+                    UserAlbumCollection.album_id == album.id
+                )
+            )
+            coll = res_coll.scalar_one_or_none()
+            if coll:
+                album_dict["collection"] = {"cd": coll.cd, "vinyl": coll.vinyl}
+            else:
+                album_dict["collection"] = None
+        return album_dict
     

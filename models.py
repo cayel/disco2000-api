@@ -1,9 +1,21 @@
-
-from sqlalchemy import Column, Integer, String, ForeignKey
+# Table de collection utilisateur/album/format
+from sqlalchemy import Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship
 from db import Base
 
+
+class UserAlbumCollection(Base):
+    __tablename__ = "user_album_collection"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    album_id = Column(Integer, ForeignKey("albums.id", ondelete="CASCADE"), nullable=False)
+    cd = Column(Boolean, default=False)
+    vinyl = Column(Boolean, default=False)
+    __table_args__ = (
+        UniqueConstraint("user_id", "album_id", name="uq_user_album"),
+    )
 # Table User avec gestion des rôles multiples
 class User(Base):
     __tablename__ = "users"

@@ -122,7 +122,9 @@ app.include_router(user_router)
 
 # --- Endpoints albums déplacés dans album_endpoints.py ---
 from album_endpoints import router as album_router
+from collection_endpoints import router as collection_router
 app.include_router(album_router)
+app.include_router(collection_router)
     
 # Endpoint pour obtenir la liste des artistes (à placer à la fin du fichier)
 @app.get("/api/artists")
