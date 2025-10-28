@@ -1,3 +1,62 @@
+
+from fastapi import Header, Depends
+from dotenv import load_dotenv
+load_dotenv()
+import os
+from typing import List, Optional, Dict, Any
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
+from fastapi import Path
+from user_endpoints import router as user_router
+
+import httpx
+from pydantic import BaseModel, Field
+
+# ... autres imports ...
+
+class LabelInfo(BaseModel):
+    name: str
+    id: Optional[int] = None
+    catno: Optional[str] = None
+
+class DiscogsMasterResponse(BaseModel):
+    artiste: Optional[str]
+    titre: Optional[str]
+    identifiants_discogs: Dict[str, Any]
+    genres: List[str]
+    styles: List[str]
+    annee: Optional[int]
+    label: Optional[List[LabelInfo]] = None
+    pochette: Optional[str] = None
+
+async def fetch_discogs_release(release_id: int) -> DiscogsMasterResponse:
+    """Appelle l'API Discogs et extrait les champs utiles pour une release donnée."""
+    url = f"https://api.discogs.com/releases/{release_id}"
+    headers = get_discogs_headers()
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, headers=headers)
+        if response.status_code != 200:
+            raise HTTPException(status_code=404, detail="Release non trouvée sur Discogs")
+        data = response.json()
+        labels = extract_label_info(data.get("labels", []))
+        pochette = extract_pochette(data.get("images", []))
+        artist_id = None
+        if data.get("artists") and len(data["artists"]) > 0:
+            artist_id = data["artists"][0].get("id")
+        return DiscogsMasterResponse(
+            artiste=data["artists"][0]["name"] if data.get("artists") else None,
+            titre=data.get("title"),
+            identifiants_discogs={
+                "release_id": data.get("id"),
+                "artist_id": artist_id,
+            },
+            genres=data.get("genres", []),
+            styles=data.get("styles", []),
+            annee=data.get("year"),
+            label=labels,
+            pochette=pochette,
+        )
+
 from fastapi import Header, Depends
 from dotenv import load_dotenv
 load_dotenv()
@@ -151,11 +210,16 @@ async def fetch_discogs_master(master_id: int) -> DiscogsMasterResponse:
             pochette=pochette,
         )
 
-# Endpoint API pour récupérer les infos d'un master Discogs
-@app.get("/api/discogs/master/{master_id}", response_model=DiscogsMasterResponse)
-async def get_discogs_master(master_id: int):
-    """Endpoint public pour obtenir les infos d'un master Discogs par son id."""
-    return await fetch_discogs_master(master_id)
+
+# Endpoint unifié pour récupérer un master ou une release Discogs
+from fastapi import Query
+@app.get("/api/discogs/album/{discogs_id}", response_model=DiscogsMasterResponse)
+async def get_discogs_album(discogs_id: int, type: str = Query("master", enum=["master", "release"])):
+    """Endpoint public pour obtenir les infos d'un master ou d'une release Discogs par son id."""
+    if type == "master":
+        return await fetch_discogs_master(discogs_id)
+    else:
+        return await fetch_discogs_release(discogs_id)
 
 @app.get("/api/data")
 def get_sample_data():

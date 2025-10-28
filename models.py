@@ -34,6 +34,7 @@ class Album(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
     discogs_master_id = Column(Integer, index=True, unique=True)
+    discogs_link_type = Column(String, default="master")  # "master" ou "release"
     year = Column(Integer)
     genre = Column(ARRAY(String))
     style = Column(ARRAY(String))

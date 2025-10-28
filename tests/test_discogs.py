@@ -35,7 +35,7 @@ def test_discogs_master_success(monkeypatch):
         return MockResponse({}, status_code=404)
     monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
     headers = {"X-API-KEY": os.getenv("API_KEY")}
-    response = client.get("/api/discogs/master/123", headers=headers)
+    response = client.get("/api/discogs/album/123?type=master", headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert data["artiste"] == "Test Artist"
@@ -59,6 +59,6 @@ def test_discogs_master_not_found(monkeypatch):
         return MockResponse({}, status_code=404)
     monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
     headers = {"X-API-KEY": "NousNavionsPasFiniDeNousParlerDAmour"}
-    response = client.get("/api/discogs/master/999999", headers=headers)
+    response = client.get("/api/discogs/album/999999?type=master", headers=headers)
     assert response.status_code == 404
     assert response.json()["detail"] == "Master non trouvé sur Discogs"

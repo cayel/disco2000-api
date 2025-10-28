@@ -7,7 +7,8 @@ from main import app
 @pytest.mark.asyncio
 async def test_get_albums_structure(monkeypatch):
     class DummyAlbum:
-        def __init__(self, artist_id, title, year, cover_url):
+        def __init__(self, id, artist_id, title, year, cover_url):
+            self.id = id
             self.artist_id = artist_id
             self.title = title
             self.year = year
@@ -26,7 +27,7 @@ async def test_get_albums_structure(monkeypatch):
                 def scalars(self_inner):
                     class DummyScalar:
                         def all(self_inner2):
-                            return [DummyAlbum(1, "Album 1", 2020, "url1"), DummyAlbum(2, "Album 2", 2021, "url2")]
+                            return [DummyAlbum(10, 1, "Album 1", 2020, "url1"), DummyAlbum(11, 2, "Album 2", 2021, "url2")]
                     return DummyScalar()
             return DummyResult()
         async def get(self, model, obj_id):
