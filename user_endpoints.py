@@ -87,7 +87,13 @@ async def get_user_token_google(body: GoogleTokenRequest):
             "roles": user.roles
         }
         access_token = create_access_token(token_data)
-        return {"access_token": access_token, "token_type": "bearer"}
+        from jwt_utils import create_refresh_token
+        refresh_token = create_refresh_token(token_data)
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        }
 
 @router.get("/api/users")
 async def list_users():

@@ -124,9 +124,11 @@ app.include_router(user_router)
 from album_endpoints import router as album_router
 from collection_endpoints import router as collection_router
 from collection_stats_endpoints import router as collection_stats_router
+from refresh_token_endpoints import router as refresh_token_router
 app.include_router(album_router)
 app.include_router(collection_router)
 app.include_router(collection_stats_router)
+app.include_router(refresh_token_router)
     
 # Endpoint pour obtenir la liste des artistes (à placer à la fin du fichier)
 @app.get("/api/artists")
