@@ -19,10 +19,14 @@ async def delete_album(album_id: int = Path(..., description="ID de l'album à s
         await session.commit()
         return None
 
-from fastapi import Request
+from fastapi import Request, Query
 
 @router.get("/api/albums")
-async def get_albums(request: Request):
+async def get_albums(
+    request: Request,
+    page: int = Query(1, ge=1, description="Numéro de page (1-indexed)"),
+    page_size: int = Query(20, ge=1, le=100, description="Nombre d'albums par page")
+):
     user = None
     roles = []
     # Tente de décoder le token pour savoir si l'utilisateur est authentifié
@@ -35,8 +39,13 @@ async def get_albums(request: Request):
             user = payload
             roles = payload.get("roles", [])
     async with SessionLocal() as session:
-        res = await session.execute(select(Album).order_by(Album.year.desc()))
+        # Pagination SQLAlchemy
+        stmt = select(Album).order_by(Album.year.desc()).offset((page - 1) * page_size).limit(page_size)
+        res = await session.execute(stmt)
         albums = res.scalars().all()
+        # Compte total pour info
+        total_res = await session.execute(select(Album))
+        total_count = len(total_res.scalars().all())
         result = []
         for album in albums:
             artist_name = None
@@ -65,7 +74,12 @@ async def get_albums(request: Request):
                 else:
                     album_dict["collection"] = None
             result.append(album_dict)
-        return result
+        return {
+            "page": page,
+            "page_size": page_size,
+            "total": total_count,
+            "albums": result
+        }
 
 
 from fastapi import Query
