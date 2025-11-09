@@ -20,12 +20,16 @@ async def delete_album(album_id: int = Path(..., description="ID de l'album à s
         return None
 
 from fastapi import Request, Query
+from typing import Optional
 
 @router.get("/api/albums")
 async def get_albums(
     request: Request,
     page: int = Query(1, ge=1, description="Numéro de page (1-indexed)"),
-    page_size: int = Query(20, ge=1, le=100, description="Nombre d'albums par page")
+    page_size: int = Query(20, ge=1, le=100, description="Nombre d'albums par page"),
+    artist: Optional[str] = Query(None, description="Filtre par nom d'artiste (recherche partielle)"),
+    year_from: Optional[int] = Query(None, description="Année de début (incluse)"),
+    year_to: Optional[int] = Query(None, description="Année de fin (incluse)")
 ):
     user = None
     roles = []
@@ -39,13 +43,34 @@ async def get_albums(
             user = payload
             roles = payload.get("roles", [])
     async with SessionLocal() as session:
+        # Construction de la requête avec filtres
+        stmt = select(Album).join(Artist, Album.artist_id == Artist.id, isouter=True)
+        
+        # Applique les filtres
+        if artist:
+            stmt = stmt.where(Artist.name.ilike(f"%{artist}%"))
+        if year_from is not None:
+            stmt = stmt.where(Album.year >= year_from)
+        if year_to is not None:
+            stmt = stmt.where(Album.year <= year_to)
+        
+        # Compte total avec filtres
+        from sqlalchemy import func
+        count_stmt = select(func.count()).select_from(Album).join(Artist, Album.artist_id == Artist.id, isouter=True)
+        if artist:
+            count_stmt = count_stmt.where(Artist.name.ilike(f"%{artist}%"))
+        if year_from is not None:
+            count_stmt = count_stmt.where(Album.year >= year_from)
+        if year_to is not None:
+            count_stmt = count_stmt.where(Album.year <= year_to)
+        
+        total_res = await session.execute(count_stmt)
+        total_count = total_res.scalar()
+        
         # Pagination SQLAlchemy
-        stmt = select(Album).order_by(Album.year.desc()).offset((page - 1) * page_size).limit(page_size)
+        stmt = stmt.order_by(Album.year.desc()).offset((page - 1) * page_size).limit(page_size)
         res = await session.execute(stmt)
         albums = res.scalars().all()
-        # Compte total pour info
-        total_res = await session.execute(select(Album))
-        total_count = len(total_res.scalars().all())
         result = []
         for album in albums:
             artist_name = None
