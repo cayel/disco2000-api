@@ -31,6 +31,7 @@ class Artist(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     discogs_id = Column(Integer, index=True, nullable=True)
+    country = Column(String(2), nullable=True)  # Code ISO 3166-1 alpha-2
     albums = relationship("Album", back_populates="artist")
 
 class Label(Base):
