@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, field_validator
 from sqlalchemy import select
 from db import SessionLocal
@@ -41,6 +41,34 @@ class ArtistUpdateRequest(BaseModel):
 async def get_countries():
     """Récupère la liste complète des pays disponibles (codes ISO 3166-1 alpha-2)."""
     return get_all_countries()
+
+
+@router.get("/api/artists/search")
+async def search_artists(
+    q: str = Query(..., description="Chaîne de caractères à rechercher dans le nom de l'artiste", min_length=1)
+):
+    """
+    Recherche des artistes par nom (recherche partielle insensible à la casse).
+    
+    Args:
+        q: Chaîne de caractères à rechercher (minimum 1 caractère)
+        
+    Returns:
+        Liste des artistes dont le nom contient la chaîne recherchée
+    """
+    async with SessionLocal() as session:
+        # Recherche insensible à la casse avec ILIKE (PostgreSQL)
+        stmt = select(Artist).where(Artist.name.ilike(f"%{q}%")).order_by(Artist.name)
+        res = await session.execute(stmt)
+        artists = res.scalars().all()
+        
+        return [{
+            "id": a.id,
+            "name": a.name,
+            "discogs_id": a.discogs_id,
+            "country": a.country,
+            "country_name": get_country_name(a.country) if a.country else None
+        } for a in artists]
 
 
 @router.get("/api/artists")

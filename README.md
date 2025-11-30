@@ -61,6 +61,7 @@ python apply_migration.py sql/06-migration_artist_country.sql
 
 ### Artistes
 - `GET /api/artists` - Liste tous les artistes avec leur pays (code ISO et nom)
+- `GET /api/artists/search?q=beatles` - Recherche d'artistes par nom (recherche partielle)
 - `GET /api/artists/{artist_id}` - Détails d'un artiste
 - `PATCH /api/artists/{artist_id}` - Met à jour un artiste (nécessite authentification contributeur)
   ```json
