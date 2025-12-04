@@ -127,8 +127,10 @@ from collection_endpoints import router as collection_router
 from collection_stats_endpoints import router as collection_stats_router
 from refresh_token_endpoints import router as refresh_token_router
 from artist_endpoints import router as artist_router
+from statistics_endpoints import router as statistics_router
 # Inclusion des routers (mettre la route spécifique /api/albums/stats avant le paramétré /api/albums/{album_id})
 app.include_router(public_collection_stats_router)
+app.include_router(statistics_router)
 app.include_router(album_router)
 app.include_router(collection_router)
 app.include_router(collection_stats_router)

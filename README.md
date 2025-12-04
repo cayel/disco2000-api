@@ -74,6 +74,12 @@ python apply_migration.py sql/06-migration_artist_country.sql
 ### Pays
 - `GET /api/countries` - Liste tous les codes pays ISO 3166-1 alpha-2 disponibles
 
+### Statistiques (Public - sans authentification)
+- `GET /api/statistics/genres-styles` - Statistiques complètes par genre et style
+- `GET /api/statistics/genres` - Statistiques uniquement par genre
+- `GET /api/statistics/styles` - Statistiques uniquement par style
+- `GET /api/statistics/overview` - Vue d'ensemble (albums, artistes, labels, décennies)
+
 ### Albums
 - `GET /api/albums` - Liste paginée des albums avec filtres optionnels :
   - `?page=1` - Numéro de page
